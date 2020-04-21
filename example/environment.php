@@ -1,6 +1,6 @@
 <?php
 define("ENVIRONMENT", "development");
-
+define("DRIVER","mysql");
 define("DB_NAME", "DB_devmazon");
 
 define("HOST_DEVELOPMENT", "localhost");

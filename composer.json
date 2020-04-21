@@ -1,0 +1,27 @@
+{
+  "name": "devmazon/myorm",
+  "description": "ORM",
+  "keywords": [
+    "devmazon",
+    "Database",
+    "PDO",
+    "CRUD"
+  ],
+  "homepage": "https://www.devmazon.com.br",
+  "version": "1.0",
+  "authors": [
+    {
+      "name": "Antonio Barra C. Junior",
+      "email": "antoniojr@devmazon.com.br",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": "^7.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "devmazon\\myorm\\": "src"
+    }
+  }
+}
