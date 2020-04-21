@@ -1,13 +1,12 @@
 <?php
-namespace DevMazon\myORM;
+namespace devmazon\myorm;
 
 use Exception;
 use PDOException;
 use DateTime;
-use \Core\Model;
 use stdClass;
 
-class MyORM extends Model
+class MyORM
 {
     private $table;
     private $primary;
@@ -25,12 +24,12 @@ class MyORM extends Model
 
     public function __construct(string $table, array $required, string $primary = 'id', bool $timestamps = true)
     {
-        parent:: __construct();
+      
         $this->table = $table;
         $this->timestamps = $timestamps;
         $this->primary = $primary;
         $this->required = $required;
-        $this->validation = New Validation();
+       
     }
 
     public function __set($name, $value)
@@ -42,31 +41,24 @@ class MyORM extends Model
         $this->data->$name = $value;
     }
 
-    /**
-     * @param $name
-     * @return bool
-     */
+
     public function __isset($name)
     {
         return isset($this->data->$name);
     }
 
-    /**
-     * @param $name
-     * @return string|null
-     */
+   
     public function __get($name)
     {
         return ($this->data->$name ?? null);
     }
 
-    //função erro, retorna todos os erros.
+  
     public function error($error)
     {
         $this->error[] = $error;
     }
-
-    //função "checkError" verifica se existe erros.
+    
     public function checkError()
     {
         if (count($this->error) > 0) {  
@@ -124,9 +116,7 @@ class MyORM extends Model
         return $this;
     }
 
-    /**
-     * função table, define a tabela que será utilizada do banco de dados.
-     */
+
     public function table(string $table)
     {
 
@@ -134,9 +124,7 @@ class MyORM extends Model
         return $this;
     }
 
-    /**
-     * função find, monta as query de cosuntas.
-     */
+
     public function find(?String $where = null, string $columns = "*")
     {
 
@@ -152,13 +140,13 @@ class MyORM extends Model
     }
 
     /**
-     * função fetch realiza as consutas ao banco de dados de acordo com as funções definidas acima e retorna uma unica linha da consulta,.
+     * fetch function, performs a query to the database and returns only one row of the table.
      */
     public function fetch()
     {
         try {
 
-            $sql = Config::db()->prepare($this->statement . $this->order . $this->limit);
+            $sql = Config::db()->prepare($this->statement . $this->group . $this->order . $this->limit . $this->offset);
             $sql->execute();
 
             if ($sql->rowCount() > 0) {
@@ -172,13 +160,13 @@ class MyORM extends Model
     }
 
     /**
-     * função fetchAll realiza as consutas ao banco de dados de acordo com as funções definidas acima e retorna um array com todas as linhas da consulta.
+     * fetchAll function, performs a query to the database and returns several rows of the table.
      */
     public function fetchAll()
     {
         try {
 
-            $sql = Config::db()->prepare( $this->statement . $this->order . $this->limit);
+            $sql = Config::db()->prepare($this->statement . $this->group . $this->order . $this->limit . $this->offset);
             $sql->execute();
 
             if ($sql->rowCount() > 0) {
@@ -192,7 +180,7 @@ class MyORM extends Model
     }
 
      /**
-     * função count, conta os dados que vem do banco é retorna valor inteiro.  
+     * count function, counts the data that comes from the database and returns the entire value.  
      */
     public function count(): int
     {
@@ -202,8 +190,7 @@ class MyORM extends Model
     }
 
     /**
-     * função create, cria novos itens em qualquer tabela do banco de dados, 
-     * necessita que o programador defina a tabela na função "table", colunas e valores na função "data".  
+     * creates new items in any database table.  
      */
     public function create(): bool
     {
@@ -232,10 +219,9 @@ class MyORM extends Model
     }
 
     /**
-     * função update, atualiza item em qualquer tabela do banco de dados, 
-     * necessita que o programador defina a tabela na função "table", colunas e valores na função "data".  
+     * updates data from a database table.  
      */
-    public function update(String $where): bool
+    public function update(String $primaryKey): bool
     {
         if(!$this->required()){
              $this->error("Preencha os campos obrigatorios!");
@@ -251,7 +237,8 @@ class MyORM extends Model
             }
             $keyValues = implode(", ", $keyValues);
 
-            $sql = Config::db()->prepare("UPDATE {$this->table} SET {$keyValues} WHERE {$where}");
+            $sql = Config::db()->prepare("UPDATE {$this->table} SET {$keyValues} WHERE {$this->primary} = :{$this->primary}");
+            $sql->bindValue(":{$this->primary}", $primaryKey);
             $sql->execute($this->filter(array_merge($this->returnData())));
             return ($sql->rowCount() ?? 1);
             return true;
@@ -263,14 +250,13 @@ class MyORM extends Model
     }
 
     /**
-     * função delete, exclui item em qualquer tabela do banco de dados, 
-     * necessita que o programador defina o id. a função retornará um boleano.  
+     * delete data from a database table. 
      */
-    public function delete(string $id): bool
+    public function delete(string $primaryKey): bool
     {
         try {
-            $sql = Config::db()->prepare("DELETE FROM {$this->table} WHERE id = :id");
-            $sql->bindValue(":id", $id);
+        $sql = Config::db()->prepare("DELETE FROM {$this->table} WHERE {$this->primary} = :{$this->primary}");
+            $sql->bindValue(":{$this->primary}", $primaryKey);
             $sql->execute();
             return true;
 
@@ -280,7 +266,8 @@ class MyORM extends Model
         }
     }
 
-     protected function required(): bool
+    //check if mandatory fields are filled.
+    protected function required(): bool
     {
         $data = (array)$this->data;
         foreach ($this->required as $field) {
@@ -292,7 +279,7 @@ class MyORM extends Model
     }
 
     /**
-     * função filter, filtra os valores antes de salvar no banco. 
+     * filters the data that will be sent to the database. 
      */
     private function filter(array $data): ?array
     {
@@ -303,6 +290,7 @@ class MyORM extends Model
         return $filter;
     }
 
+    
     protected function returnData(): ?array
     {
         $returnData = (array)$this->data;

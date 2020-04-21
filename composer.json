@@ -9,6 +9,7 @@
   ],
   "homepage": "https://www.devmazon.com.br",
   "version": "1.0",
+  "license": "MIT",
   "authors": [
     {
       "name": "Antonio Barra C. Junior",
