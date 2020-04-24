@@ -8,9 +8,11 @@ use stdClass;
 
 class MyORM
 {
+
     private $table;
     private $primary;
     private $required;
+    protected $data_base;
     protected $timestamps;
     protected $columns;
     protected $group;
@@ -20,15 +22,16 @@ class MyORM
     protected $statement;
     protected $data;
     protected $error = [];
+    
 
 
     public function __construct(string $table, array $required, string $primary = 'id', bool $timestamps = true)
     {
-      
         $this->table = $table;
         $this->timestamps = $timestamps;
         $this->primary = $primary;
         $this->required = $required;
+
        
     }
 
@@ -77,6 +80,11 @@ class MyORM
             $msg .= $msgsError;
         }
         return $msg;
+    }
+
+    public function data_base(string $data_base = null){
+        $this->data_base = $data_base;
+        return $this;
     }
 
     /**
@@ -146,16 +154,17 @@ class MyORM
     {
         try {
 
-            $sql = Config::db()->prepare($this->statement . $this->group . $this->order . $this->limit . $this->offset);
+            $sql = $this->statement . $this->group . $this->order . $this->limit . $this->offset;
+            $sql = is_null($this->data_base)? Config::db()->prepare($sql): Config::db_another($this->data_base)->prepare($sql);
             $sql->execute();
 
             if ($sql->rowCount() > 0) {
-                return $sql->fetch();
+                return $sql->fetch(\PDO::FETCH_ASSOC);
             }
 
         } catch (PDOException $exception) {
             $this->error($exception->getMessage());
-            return false;
+            return null;
         }
     }
 
@@ -165,17 +174,18 @@ class MyORM
     public function fetchAll()
     {
         try {
-
-            $sql = Config::db()->prepare($this->statement . $this->group . $this->order . $this->limit . $this->offset);
+            
+            $sql = $this->statement . $this->group . $this->order . $this->limit . $this->offset;
+            $sql = is_null($this->data_base)? Config::db()->prepare($sql): Config::db_another($this->data_base)->prepare($sql);
             $sql->execute();
 
             if ($sql->rowCount() > 0) {
-                return $sql->fetchAll();
+                return $sql->fetchAll(\PDO::FETCH_ASSOC);
             }
 
         } catch (PDOException $exception) {
             $this->error($exception->getMessage());
-            return false;
+            return null;
         }
     }
 
@@ -184,7 +194,7 @@ class MyORM
      */
     public function count(): int
     {
-        $sql = Config::db()->prepare($this->statement);
+        $sql = is_null($this->data_base)? Config::db()->prepare($this->statement): Config::db_another($this->data_base)->prepare($this->statement);
         $sql->execute();
         return $sql->rowCount();
     }
@@ -194,6 +204,7 @@ class MyORM
      */
     public function create(): bool
     {
+
         $primary = $this->primary;
         try {
         if(!$this->required()){
@@ -208,7 +219,8 @@ class MyORM
             $columns = implode(", ", array_keys($this->returnData()));
             $values = ":" . implode(", :", array_keys($this->returnData()));
 
-            $sql = Config::db()->prepare("INSERT INTO {$this->table} ({$columns}) VALUES ({$values})");
+            $sql = "INSERT INTO {$this->table} ({$columns}) VALUES ({$values})";
+            $sql = is_null($this->data_base)? Config::db()->prepare($sql): Config::db_another($this->data_base)->prepare($sql);
             $sql->execute($this->filter(array_merge($this->returnData())));
 
             return true;
@@ -223,6 +235,7 @@ class MyORM
      */
     public function update(String $primaryKey): bool
     {
+
         if(!$this->required()){
              $this->error("Preencha os campos obrigatorios!");
              return false;
@@ -237,7 +250,8 @@ class MyORM
             }
             $keyValues = implode(", ", $keyValues);
 
-            $sql = Config::db()->prepare("UPDATE {$this->table} SET {$keyValues} WHERE {$this->primary} = :{$this->primary}");
+            $sql = "UPDATE {$this->table} SET {$keyValues} WHERE {$this->primary} = :{$this->primary}";
+            $sql = is_null($this->data_base)? Config::db()->prepare($sql): Config::db_another($this->data_base)->prepare($sql);
             $sql->bindValue(":{$this->primary}", $primaryKey);
             $sql->execute($this->filter(array_merge($this->returnData())));
             return ($sql->rowCount() ?? 1);
@@ -255,7 +269,8 @@ class MyORM
     public function delete(string $primaryKey): bool
     {
         try {
-        $sql = Config::db()->prepare("DELETE FROM {$this->table} WHERE {$this->primary} = :{$this->primary}");
+            $sql = "DELETE FROM {$this->table} WHERE {$this->primary} = :{$this->primary}";
+            $sql = is_null($this->data_base)? Config::db()->prepare($sql): Config::db_another($this->data_base)->prepare($sql);
             $sql->bindValue(":{$this->primary}", $primaryKey);
             $sql->execute();
             return true;
@@ -294,9 +309,6 @@ class MyORM
     protected function returnData(): ?array
     {
         $returnData = (array)$this->data;
-        unset($returnData['validation']);
-        unset($returnData['rules']);
-        unset($returnData['rulesToEdit']);
         return $returnData;
     }
 

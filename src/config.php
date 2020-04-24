@@ -8,8 +8,11 @@ class Config{
 
     private static $db;
     private static $errorDb;
-
+    
+   
+    
     public function db(){
+    
         try{
             $config = array();
         if (ENVIRONMENT == 'development') {     
@@ -31,13 +34,44 @@ class Config{
         self::$db = new PDO($config['driver'].":dbname=" . $config['dbname'] . ";host=" . $config['host'], $config['dbuser'], $config['dbpass']);
         self::$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch(PDOException $exception){
-           self::$errorDb = $exception;
+            self::$errorDb = $exception;
+        }
+
+        return self::$db;
+    
+    }
+
+    public function db_another($data_base){
+
+        try{
+            $config = array();
+        if (ENVIRONMENT == 'development') {    
+        
+            $config['driver'] = constant("DB_{$data_base}_DRIVER");       
+            $config['dbname'] = constant("DB_{$data_base}_NAME");
+            $config['host'] = constant("DB_{$data_base}_HOST_DEVELOPMENT");
+            $config['dbuser'] = constant("DB_{$data_base}_USER_DEVELOPMENT");
+            $config['dbpass'] = constant("DB_{$data_base}_PASS_DEVELOPMENT");
+        } else {
+            $config['driver'] = constant("DB_{$data_base}_DRIVER");       
+            $config['dbname'] = constant("DB_{$data_base}_NAME");
+            $config['host'] = constant("DB_{$data_base}_HOST_PRODUCTION");
+            $config['dbuser'] = constant("DB_{$data_base}_USER_PRODUCTION");
+            $config['dbpass'] = constant("DB_{$data_base}_PASS_PRODUCTION");
+        }
+
+        $config['default_lang'] = 'pt-br';
+
+        self::$db = new PDO($config['driver'].":dbname=" . $config['dbname'] . ";host=" . $config['host'], $config['dbuser'], $config['dbpass']);
+        self::$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        } catch(PDOException $exception){
+            self::$errorDb = $exception;
         }
 
         return self::$db;
     }
 
     public function getErrorDb(){
-        return self::$error;
+        return self::$errorDb;
     }
 }
