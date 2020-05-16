@@ -12,10 +12,7 @@ trait CrudTrait
      * creates new items in any database table.  
      */
     public function create(): bool
-    {
-
-        $primary = $this->primary;
-        
+    {        
         if ($this->timestamps) {
             $this->created_at = (new DateTime("now"))->format("Y-m-d H:i:s");
         }
@@ -23,7 +20,7 @@ trait CrudTrait
             if(!$this->required()){
                 throw new PDOException("Preencha os campos obrigatorios!");
             }
-        
+            $primary = $this->primary;
             $this->$primary = md5(uniqid(rand(), true));
         
             $columns = implode(", ", array_keys($this->returnData()));
@@ -32,8 +29,8 @@ trait CrudTrait
             $sql = "INSERT INTO {$this->table} ({$columns}) VALUES ({$values})";
             $sql = is_null($this->data_base)? Config::db()->prepare($sql): Config::db_another($this->data_base)->prepare($sql);
             $sql->execute($this->filter(array_merge($this->returnData())));
-
             return true;
+            
         } catch (PDOException $exception) {
             $this->error("Prezado usuário ocorreu uma ação não prevista, informe ao administrador do sistema, error: ".$exception->getMessage());
             return false;
@@ -45,7 +42,7 @@ trait CrudTrait
      * @return bool
      * updates data from a database table.  
      */
-    public function update(String $primaryKey): bool
+    public function update(): bool
     {
 
         if ($this->timestamps) {
@@ -55,17 +52,19 @@ trait CrudTrait
             if(!$this->required()){
                 throw new PDOException("Preencha os campos obrigatorios!");
             }
+
             $keyValues = [];
             foreach ($this->returnData() as $key => $value) {
                 $keyValues[] = "{$key} = :{$key}";
             }
             $keyValues = implode(", ", $keyValues);
 
+            $id = $this->returnData()[$this->primary];
+
             $sql = "UPDATE {$this->table} SET {$keyValues} WHERE {$this->primary} = :{$this->primary}";
             $sql = is_null($this->data_base)? Config::db()->prepare($sql): Config::db_another($this->data_base)->prepare($sql);
-            $sql->bindValue(":{$this->primary}", $primaryKey);
+            $sql->bindValue(":{$this->primary}", $id);
             $sql->execute($this->filter(array_merge($this->returnData())));
-            return ($sql->rowCount() ?? 1);
             return true;
 
         } catch (PDOException $exception) {
@@ -79,12 +78,13 @@ trait CrudTrait
      * @return bool
      * delete data from a database table. 
      */
-    public function delete(string $primaryKey): bool
+    public function delete(): bool
     {
         try {
+            $id = $this->returnData()[$this->primary];
             $sql = "DELETE FROM {$this->table} WHERE {$this->primary} = :{$this->primary}";
             $sql = is_null($this->data_base)? Config::db()->prepare($sql): Config::db_another($this->data_base)->prepare($sql);
-            $sql->bindValue(":{$this->primary}", $primaryKey);
+            $sql->bindValue(":{$this->primary}", "{$id}");
             $sql->execute();
             return true;
 

@@ -4,26 +4,57 @@ namespace devmazon\myorm;
 
 use Exception;
 use PDOException;
-use DateTime;
+use PDO;
 use stdClass;
 
-class MyORM
+abstract class MyORM
 {
     use CrudTrait;
-
+    
+    /** @var string $table database table */
     private $table;
+    
+    /** @var string $primary table primary key field */
     private $primary;
+
+    /** @var array $required table required fields */
     private $required;
+
+    /** @var string $data_base database */
     protected $data_base;
+
+    /** @var bool $timestamps control created and updated at */
     protected $timestamps;
+
+    /** @var string */
     protected $columns;
+
+    /** @var string */
+    protected $where;
+
+    /** @var string */
+    protected $params;
+
+    /** @var string */
     protected $group;
+
+    /** @var string */
     protected $order;
+
+    /** @var int */
     protected $limit;
+
+    /** @var int */
     protected $offset;
+
+    /** @var string */
     protected $statement;
+
+    /** @var object|null */
     protected $data;
-    protected $error = [];
+
+    /** @var \PDOException|null */
+    protected $error;
 
 
     /**
@@ -72,18 +103,23 @@ class MyORM
         return ($this->data->$name ?? null);
     }
 
+    public function data(): ?object
+    {
+        return $this->data;
+    }
+
     /**
      * @return PDOException|Exception|null|false
      */
     public function error($error)
     {
-        $this->error[] = $error;
+        $this->error = $error;
     }
 
     /**
      * @return bool
      */
-    public function checkError()
+    public function checkError(): bool
     {
         if (count($this->error) > 0) {
             return true;
@@ -95,14 +131,9 @@ class MyORM
     /**
      * @return string
      */
-    public function messageError()
+    public function fail()
     {
-        $msg = '';
-
-        foreach ($this->error as $msgsError) {
-            $msg .= $msgsError;
-        }
-        return $msg;
+        return $this->error;
     }
 
     /**
@@ -119,7 +150,7 @@ class MyORM
      * @param string $column
      * @return MyORM|null
      */
-    public function group(string $column)
+    public function group(string $column): ?MyORM
     {
         $this->group = " GROUP BY {$column}";
         return $this;
@@ -129,7 +160,7 @@ class MyORM
      * @param string $columnOrder
      * @return MyORM|null
      */
-    public function order(string $columnOrder)
+    public function order(string $columnOrder): ?MyORM
     {
         $this->order = " ORDER BY {$columnOrder}";
         return $this;
@@ -139,7 +170,7 @@ class MyORM
      * @param int $limit
      * @return MyORM|null
      */
-    public function limit(int $limit)
+    public function limit(int $limit): ?MyORM
     {
 
         $this->limit = " LIMIT {$limit}";
@@ -150,9 +181,17 @@ class MyORM
      * @param int $offset
      * @return MyORM|null
      */
-    public function offset(int $offset)
+    public function offset(int $offset): ?MyORM
     {
         $this->offset = " OFFSET {$offset}";
+        return $this;
+    }
+
+    public function where(string $where, string $params = null): ?MyORM
+    {
+        $this->where = " WHERE {$where} = :{$where}";
+        $params = ":{$where}={$params}";
+        parse_str($params, $this->params);
         return $this;
     }
 
@@ -161,56 +200,54 @@ class MyORM
      * @param string $column
      * @return MyORM
      */
-    public function find(?String $where = null, string $columns = "*")
+    public function find(string $columns = "*"): ?MyORM
     {
-
-        if ($where) {
-            $this->statement = "SELECT {$columns} FROM {$this->table} WHERE {$where}";
-
-            return $this;
-        }
-
         $this->statement = "SELECT {$columns} FROM {$this->table}";
-
         return $this;
+    }
+
+    /**
+     * @param string $id
+     * @param string $columns
+     * @return MyORM|null
+     */
+    public function findOne(string $id, string $columns = "*"): ?MyORM
+    {
+        $find = $this->find($columns)->where($this->primary, $id);
+        return $find->fetch('object');
     }
 
     /**
      * @return array|null
      * fetch function, performs a query to the database and returns only one row of the table.
      */
-    public function fetch()
+    public function fetch(string $fetch = null)
     {
         try {
 
-            $sql = $this->statement . $this->group . $this->order . $this->limit . $this->offset;
+            $sql = $this->statement . $this->where . $this->group . $this->order . $this->limit . $this->offset;
             $sql = is_null($this->data_base) ? Config::db()->prepare($sql) : Config::db_another($this->data_base)->prepare($sql);
-            $sql->execute();
+            $sql->execute($this->params);
 
-            if ($sql->rowCount() > 0) {
-                return $sql->fetch(\PDO::FETCH_ASSOC);
+            if (!$sql->rowCount()) {
+                return null;
             }
-        } catch (PDOException $exception) {
-            $this->error($exception->getMessage());
-            return null;
-        }
-    }
 
-    /**
-     * @return array|null
-     * fetchAll function, performs a query to the database and returns several rows of the table.
-     */
-    public function fetchAll()
-    {
-        try {
-
-            $sql = $this->statement . $this->group . $this->order . $this->limit . $this->offset;
-            $sql = is_null($this->data_base) ? Config::db()->prepare($sql) : Config::db_another($this->data_base)->prepare($sql);
-            $sql->execute();
-
-            if ($sql->rowCount() > 0) {
-                return $sql->fetchAll(\PDO::FETCH_ASSOC);
+            switch ($fetch) {
+                case 'one':
+                    $sql = $sql->fetch(\PDO::FETCH_ASSOC);
+                    break;
+                case 'object':
+                    $sql = $sql->fetchObject(static::class);
+                    break;
+                case 'all':
+                    $sql = $sql->fetchAll(\PDO::FETCH_ASSOC);
+                    break;
+                default:
+                    $sql = $sql->fetchAll(PDO::FETCH_CLASS, static::class);
+                    break;
             }
+            return $sql;
         } catch (PDOException $exception) {
             $this->error($exception->getMessage());
             return null;
@@ -223,9 +260,18 @@ class MyORM
      */
     public function count(): int
     {
-        $sql = is_null($this->data_base) ? Config::db()->prepare($this->statement) : Config::db_another($this->data_base)->prepare($this->statement);
-        $sql->execute();
+        $sql = $this->statement . $this->where;
+        $sql = is_null($this->data_base) ? Config::db()->prepare($sql) : Config::db_another($this->data_base)->prepare($sql);
+        $sql->execute($this->params);
         return $sql->rowCount();
+    }
+
+    /**
+     * @return MyORM|null
+     */
+    public function get(string $fetch = null)
+    {
+        return $this->find()->fetch($fetch);
     }
 
     /**
@@ -233,16 +279,15 @@ class MyORM
      */
     public function save(): bool
     {
-        $primaryKey = $this->primary;            
+        $id = $this->primary;
 
-            if (!empty($this->data->$primaryKey)) 
-            {
-                return $this->update($this->data->$primaryKey);
-            }
-            if(empty($this->data->$primaryKey)) {
-                return $this->create();
-            }
-            return false;
+        if (!empty($this->data->$id)) {
+            return $this->update();
+        }
+        if (empty($this->data->$id)) {
+            return $this->create();
+        }
+        return false;
     }
 
     /**
