@@ -11,7 +11,7 @@ class Config{
     
    
     
-    public function db(){
+    public static function db(){
     
         try{
             $config = array();
@@ -41,7 +41,7 @@ class Config{
     
     }
 
-    public function db_another($data_base){
+    public static function db_another($data_base){
 
         try{
             $config = array();
@@ -71,7 +71,7 @@ class Config{
         return self::$db;
     }
 
-    public function getErrorDb(){
+    public static function getErrorDb(){
         return self::$errorDb;
     }
 }
