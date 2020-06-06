@@ -1,13 +1,35 @@
 <?php
 define("ENVIRONMENT", "development");
-define("DRIVER","mysql");
-define("DB_NAME", "DB_devmazon");
 
-define("HOST_DEVELOPMENT", "localhost");
-define("DB_USER_DEVELOPMENT", "root");
-define("DB_PASS_DEVELOPMENT", "");
-
-define("HOST_PRODUCTION", "");
-define("DB_USER_PRODUCTION", "");
-define("DB_PASS_PRODUCTION", "");
+if (ENVIRONMENT == "development") {
+    define("DB_CONFIG", [
+        "driver" => "mysql",
+        "host" => "localhost",
+        "port" => "3306",
+        "dbname" => "db_devmazon",
+        "username" => "root",
+        "password" => "",
+        "options" => [
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8",
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
+            PDO::ATTR_CASE => PDO::CASE_NATURAL
+        ]
+    ]);
+} else {
+    define("DB_CONFIG", [
+        "driver" => "mysql",
+        "host" => "localhost",
+        "port" => "3306",
+        "dbname" => "db_devmaz91",
+        "username" => "devmaz91",
+        "password" => "AJ801275",
+        "options" => [
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8",
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_OBJ,
+            PDO::ATTR_CASE => PDO::CASE_NATURAL
+        ]
+    ]);
+}
 ?>

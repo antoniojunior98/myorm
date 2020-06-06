@@ -10,10 +10,10 @@ use stdClass;
 abstract class MyORM
 {
     use CrudTrait;
-    
+
     /** @var string $table database table */
     private $table;
-    
+
     /** @var string $primary table primary key field */
     private $primary;
 
@@ -117,18 +117,6 @@ abstract class MyORM
     }
 
     /**
-     * @return bool
-     */
-    public function checkError(): bool
-    {
-        if (count($this->error) > 0) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    /**
      * @return string
      */
     public function fail()
@@ -144,6 +132,28 @@ abstract class MyORM
     {
         $this->data_base = $data_base;
         return $this;
+    }
+
+    /**
+     * @param string|null $where
+     * @param string $column
+     * @return MyORM
+     */
+    public function find(string $columns = "*"): ?MyORM
+    {
+        $this->statement = "SELECT {$columns} FROM {$this->table}";
+        return $this;
+    }
+
+    /**
+     * @param string $id
+     * @param string $columns
+     * @return MyORM|null
+     */
+    public function findOne(int $id, string $columns = "*"): ?MyORM
+    {
+        $find = $this->find($columns)->where($this->primary, $id);
+        return $find->fetch("one");
     }
 
     /**
@@ -196,28 +206,6 @@ abstract class MyORM
     }
 
     /**
-     * @param string|null $where
-     * @param string $column
-     * @return MyORM
-     */
-    public function find(string $columns = "*"): ?MyORM
-    {
-        $this->statement = "SELECT {$columns} FROM {$this->table}";
-        return $this;
-    }
-
-    /**
-     * @param string $id
-     * @param string $columns
-     * @return MyORM|null
-     */
-    public function findOne(string $id, string $columns = "*"): ?MyORM
-    {
-        $find = $this->find($columns)->where($this->primary, $id);
-        return $find->fetch('object');
-    }
-
-    /**
      * @return array|null
      * fetch function, performs a query to the database and returns only one row of the table.
      */
@@ -235,13 +223,13 @@ abstract class MyORM
 
             switch ($fetch) {
                 case 'one':
-                    $sql = $sql->fetch(\PDO::FETCH_ASSOC);
-                    break;
-                case 'object':
                     $sql = $sql->fetchObject(static::class);
                     break;
                 case 'all':
                     $sql = $sql->fetchAll(\PDO::FETCH_ASSOC);
+                    break;
+                case 'fetch':
+                    $sql = $sql->fetch(\PDO::FETCH_ASSOC);
                     break;
                 default:
                     $sql = $sql->fetchAll(PDO::FETCH_CLASS, static::class);
@@ -279,13 +267,16 @@ abstract class MyORM
      */
     public function save(): bool
     {
-        $id = $this->primary;
+        $primary = $this->primary;
 
-        if (!empty($this->data->$id)) {
-            return $this->update();
+
+        if (!empty($this->data->$primary)) {
+            $update = $this->update();
+            return $update;
         }
-        if (empty($this->data->$id)) {
-            return $this->create();
+        if (empty($this->data->$primary)) {
+            $create = $this->create();
+            return $create;
         }
         return false;
     }
@@ -308,9 +299,9 @@ abstract class MyORM
     /**
      * @return array|null
      */
-    protected function returnData(): ?array
+    protected function safe(): ?array
     {
-        $returnData = (array) $this->data;
-        return $returnData;
+        $safe = (array) $this->data;
+        return $safe;
     }
 }
